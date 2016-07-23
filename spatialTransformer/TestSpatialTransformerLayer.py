@@ -25,6 +25,17 @@ logger = logging.getLogger('TestSpatialTransformerLayer')
 def assertEqual(left, right):
     assert np.isclose(left, right).all()
 
+def assertRotated(left, right):
+    logger.debug("Rotation Test")
+    transposedRight = np.transpose(right, (1, 0, 2))
+    logger.debug("Right")
+    logger.debug(right)
+    logger.debug("Result")
+    logger.debug(left)
+    logger.debug("Reference")
+    logger.debug(transposedRight)
+    assert np.isclose(left, transposedRight).all()
+
 def runTest():
     imageSize = 4
     imageChannels = 1
@@ -38,16 +49,22 @@ def runTest():
     image = np.random.rand(imageSize, imageSize, imageChannels)
 
     inputImage = tf.constant(image, dtype=tf.float32)
-
-    graph = stLayer.forward(inputImage)
-
+    
     session = tf.Session()
 
-    result = session.run(graph)
-
+    identity = stLayer.forward(inputImage)
+    result = session.run(identity)
     assertEqual(result, image)
-    
-    print 'Test Passed'
+    logger.info ('Identity Test Passed')
+
+    rtLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "Rotary")
+    rotated = rtLayer.forward(inputImage)
+    result2 = session.run(rotated)
+    assertRotated(result2, image)
+    logger.info ('Rotation Test Passed')
+
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Test spatial transformer layer")

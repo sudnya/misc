@@ -11,6 +11,7 @@
 import tensorflow as tf
 import math
 
+from RotaryLayer import RotaryLayer
 from UnitaryLayer import UnitaryLayer
 
 class SpatialTransformerLayer:
@@ -30,9 +31,10 @@ class SpatialTransformerLayer:
         
 
     def createLocalizationNetwork(self):
-        #
         if self.localizationType == "Unitary":
             return UnitaryLayer()
+        if self.localizationType == "Rotary":
+            return RotaryLayer()
 
     def forward(self, inputData):
         #(1). localisation
@@ -50,7 +52,7 @@ class SpatialTransformerLayer:
         transformedCoordinates = tf.transpose(tf.matmul(theta, tf.transpose(augmentedCoordinates)))
 
         #(5). bi-linear sampling at input matrix where coordinates are transformed from step (4)
-        outputMatrix = self.bilinear(inputData, transformedCoordinates)#, coordinatesMatrix)
+        outputMatrix = self.bilinear(inputData, transformedCoordinates)
 
         #(6). Step (5) is output matrix --> reshape
         result = tf.reshape(outputMatrix, [self.outputW, self.outputH, self.outputC])
