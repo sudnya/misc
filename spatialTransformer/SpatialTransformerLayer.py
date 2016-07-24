@@ -11,7 +11,8 @@
 import tensorflow as tf
 import math
 
-from RotaryLayer import RotaryLayer
+from RotaryLayer  import RotaryLayer
+from ScaledLayer  import ScaledLayer
 from UnitaryLayer import UnitaryLayer
 
 class SpatialTransformerLayer:
@@ -31,10 +32,31 @@ class SpatialTransformerLayer:
         
 
     def createLocalizationNetwork(self):
-        if self.localizationType == "Unitary":
-            return UnitaryLayer()
         if self.localizationType == "Rotary":
             return RotaryLayer()
+        if self.localizationType == "Scaled":
+            return ScaledLayer()
+        if self.localizationType == "Unitary":
+            return UnitaryLayer()
+
+    def clampToInputBoundary(self, transformedCoordinates):
+
+        sliceW = tf.slice(transformedCoordinates, [0, 0], [tf.shape(transformedCoordinates)[0], 1])
+
+        sliceW = tf.maximum(sliceW, tf.constant([0], dtype=tf.float32))
+        sliceW = tf.minimum(sliceW, tf.constant([self.inputW], dtype=tf.float32))
+        
+        sliceH = tf.slice(transformedCoordinates, [0, 1], [tf.shape(transformedCoordinates)[0], 1])
+
+        sliceH = tf.maximum(sliceH, tf.constant([0], dtype=tf.float32))
+        sliceH = tf.minimum(sliceH, tf.constant([self.inputH], dtype=tf.float32))
+
+        sliceC = tf.slice(transformedCoordinates, [0, 2], [tf.shape(transformedCoordinates)[0], 1])
+
+        sliceC = tf.maximum(sliceC, tf.constant([0], dtype=tf.float32))
+        sliceC = tf.minimum(sliceC, tf.constant([self.inputC], dtype=tf.float32))
+
+        return tf.concat(1, [sliceW, sliceH, sliceC])
 
     def forward(self, inputData):
         #(1). localisation
@@ -50,6 +72,8 @@ class SpatialTransformerLayer:
         augmentedCoordinates = tf.concat(1, [coordinatesMatrix, ones])
 
         transformedCoordinates = tf.transpose(tf.matmul(theta, tf.transpose(augmentedCoordinates)))
+
+        transformedCoordinates = self.clampToInputBoundary(transformedCoordinates)
 
         #(5). bi-linear sampling at input matrix where coordinates are transformed from step (4)
         outputMatrix = self.bilinear(inputData, transformedCoordinates)
@@ -72,9 +96,9 @@ class SpatialTransformerLayer:
 
     def getCoordinates(self):
         retVal = []
-        for i in range(0, self.inputW):
-            for j in range(0, self.inputH):
-                for k in range(0, self.inputC):
+        for i in range(0, self.outputW):
+            for j in range(0, self.outputH):
+                for k in range(0, self.outputC):
                     retVal.append([i, j, k])
 
         return tf.constant(retVal, dtype=tf.float32)
@@ -132,10 +156,10 @@ class SpatialTransformerLayer:
         W_llu = tf.mul(tf.mul(tf.sub(ConstantOne, deltaW) , tf.sub(ConstantOne, deltaH)) , deltaC                     )
         W_lul = tf.mul(tf.mul(tf.sub(ConstantOne, deltaW) , deltaH                     ) , tf.sub(ConstantOne, deltaC))
         W_luu = tf.mul(tf.mul(tf.sub(ConstantOne, deltaW) , deltaH                     ) , deltaC                     )
-        W_ull = tf.mul(tf.mul(deltaW            , tf.sub(ConstantOne, deltaH)          ) , tf.sub(ConstantOne, deltaC))
-        W_ulu = tf.mul(tf.mul(deltaW            , tf.sub(ConstantOne, deltaH)          ) , deltaC             )
-        W_uul = tf.mul(tf.mul(deltaW            , deltaH                               ) , tf.sub(ConstantOne, deltaC))
-        W_uuu = tf.mul(tf.mul(deltaW            , deltaH                               ) , deltaC             )
+        W_ull = tf.mul(tf.mul(deltaW                      , tf.sub(ConstantOne, deltaH)) , tf.sub(ConstantOne, deltaC))
+        W_ulu = tf.mul(tf.mul(deltaW                      , tf.sub(ConstantOne, deltaH)) , deltaC                     )
+        W_uul = tf.mul(tf.mul(deltaW                      , deltaH                     ) , tf.sub(ConstantOne, deltaC))
+        W_uuu = tf.mul(tf.mul(deltaW                      , deltaH                     ) , deltaC                     )
 
         weightList = []
 
