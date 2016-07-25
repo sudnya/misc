@@ -14,6 +14,7 @@ import math
 from RotaryLayer  import RotaryLayer
 from ScaledLayer  import ScaledLayer
 from UnitaryLayer import UnitaryLayer
+from ScaledWithOffsetLayer  import ScaledWithOffsetLayer
 
 class SpatialTransformerLayer:
     def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType):
@@ -36,8 +37,14 @@ class SpatialTransformerLayer:
             return RotaryLayer()
         if self.localizationType == "Scaled":
             return ScaledLayer()
+        if self.localizationType == "ScaledWithOffset":
+            return ScaledWithOffsetLayer()
         if self.localizationType == "Unitary":
             return UnitaryLayer()
+        #if self.localizationType == "FullyConnected":
+        #    return FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 3*4)
+        #if self.localizationType == "Conv2DLayer":
+        #    return Conv2DLayer(self.inputW, self.inputH, self.inputC, 3, 4)
 
     def clampToInputBoundary(self, transformedCoordinates):
 
@@ -143,11 +150,18 @@ class SpatialTransformerLayer:
     def getNeighborWeights(self, transformedCoordinates, clampedCoordinatesList):
         flooredCoordinates = clampedCoordinatesList[0]
 
+        #transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], summarize=1000)
+        #flooredCoordinates = tf.Print(flooredCoordinates, [flooredCoordinates], summarize=1000)
         deltas = tf.sub(transformedCoordinates, flooredCoordinates)
+        #deltas = tf.Print(deltas, [deltas], summarize=1000)
 
         deltaW = self.sliceIndex(deltas, 0)
         deltaH = self.sliceIndex(deltas, 1)
         deltaC = self.sliceIndex(deltas, 2)
+
+        #deltaW = tf.Print(deltaW, [deltaW], summarize=1000)
+        #deltaH = tf.Print(deltaH, [deltaH], summarize=1000)
+        #deltaC = tf.Print(deltaC, [deltaC], summarize=1000)
 
         #just declare for concisely writing the various weights
         ConstantOne = tf.constant([1], dtype=tf.float32)
@@ -161,6 +175,15 @@ class SpatialTransformerLayer:
         W_uul = tf.mul(tf.mul(deltaW                      , deltaH                     ) , tf.sub(ConstantOne, deltaC))
         W_uuu = tf.mul(tf.mul(deltaW                      , deltaH                     ) , deltaC                     )
 
+        #W_lll = tf.Print(W_lll, [W_llu], summarize=1000)
+        #W_llu = tf.Print(W_llu, [W_lll], summarize=1000)
+        #W_lul = tf.Print(W_lul, [W_lul], summarize=1000)
+        #W_luu = tf.Print(W_luu, [W_luu], summarize=1000)
+        #W_ull = tf.Print(W_ull, [W_ull], summarize=1000)
+        #W_ulu = tf.Print(W_ulu, [W_ulu], summarize=1000)
+        #W_uul = tf.Print(W_uul, [W_uul], summarize=1000)
+        #W_uuu = tf.Print(W_uuu, [W_uuu], summarize=1000)
+
         weightList = []
 
         weightList.append(W_lll) 
@@ -171,7 +194,8 @@ class SpatialTransformerLayer:
         weightList.append(W_ulu) 
         weightList.append(W_uul) 
         weightList.append(W_uuu) 
-        
+       
+
         return weightList
 
 
@@ -191,5 +215,6 @@ class SpatialTransformerLayer:
         for value, weight in zip(data, weightedDistance):
             accumulator = tf.add(tf.mul(value, weight), accumulator)
 
+        #accumulator = tf.Print(accumulator, [accumulator], summarize=1000)
         return accumulator
 

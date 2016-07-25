@@ -126,6 +126,22 @@ def assertScaled(left, right):
     logger.debug(scaledRight)
     assert np.isclose(left, scaledRight).all()
 
+
+def assertManualWithOffset(left, right):
+    logger.debug("Scaled with offset Test")
+
+    #reference = np.empty_list(right)
+    reference = np.array([3.5 + i * 0.5 for i in range(16)], dtype=np.float)
+    reference = np.reshape(reference, right.shape)
+
+
+    logger.debug("Result")
+    logger.debug(left)
+    logger.debug("Reference")
+    logger.debug(reference)
+    assert np.isclose(left, reference).all()
+
+
 def runTest():
     imageSize = 4
     imageChannels = 1
@@ -161,6 +177,14 @@ def runTest():
     assertScaled(result3, image)
     logger.info ('Scaling Test Passed')
 
+    scalingWithOffsetLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ScaledWithOffset")
+    manual = np.arange(1, (imageSize*imageSize + 1), dtype=np.float)
+    manual = np.reshape(manual, (imageSize, imageSize, imageChannels))
+    manualImage = tf.constant(manual, dtype=tf.float32)
+    scaledWithOffset = scalingWithOffsetLayer.forward(manualImage)
+    result4 = session.run(scaledWithOffset)
+    assertManualWithOffset(result4, manual)
+    logger.info ('Scaling with offset Test Passed')
 
 
 
