@@ -111,9 +111,9 @@ void runBenchmark(const BenchmarkOptions& options)
         miniBatchFactor = 1;
     }
 
-    check(cudaMallocManaged(&source, sizeof(float) * options.miniBatchSize * options.imageChannels * options.imageH * options.imageW));
-    check(cudaMallocManaged(&destination, sizeof(float) * options.miniBatchSize * options.filters * options.imageH * options.imageW));
-    check(cudaMallocManaged(&filter, sizeof(float) * filterMultiplier * options.filters * options.imageChannels * options.filterH * options.filterW));
+    check(cudaMalloc(&source, sizeof(float) * options.miniBatchSize * options.imageChannels * options.imageH * options.imageW));
+    check(cudaMalloc(&destination, sizeof(float) * options.miniBatchSize * options.filters * options.imageH * options.imageW));
+    check(cudaMalloc(&filter, sizeof(float) * filterMultiplier * options.filters * options.imageChannels * options.filterH * options.filterW));
 
     // create descriptors and allocate memory
     cudnnHandle_t handle;
@@ -151,6 +151,7 @@ void runBenchmark(const BenchmarkOptions& options)
 
     check(cudnnSetFilter4dDescriptor(filterDescriptor,
                                      CUDNN_DATA_FLOAT, // image data type
+                                     CUDNN_TENSOR_NCHW,
                                      options.filters,        // number of output feature maps
                                      options.imageChannels,        // number of input feature maps
                                      options.filterH,        // height of each input filter
@@ -181,7 +182,7 @@ void runBenchmark(const BenchmarkOptions& options)
                                                   &workspaceSize));
 
     void* workspace;
-    check(cudaMallocManaged(&workspace, workspaceSize));
+    check(cudaMalloc(&workspace, workspaceSize));
 
     // start timers
     cudaEvent_t start;

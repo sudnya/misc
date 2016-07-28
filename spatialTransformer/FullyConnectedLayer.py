@@ -44,7 +44,7 @@ class FullyConnectedLayer:
         return self.weights
 
     def createWeightMatrix(self, inputSize, outputSize):
-        return tf.Variable( tf.truncated_normal([inputSize, outputSize], stddev=1.0 / math.sqrt(float(inputSize))), name='weights')
+        return tf.Variable( tf.truncated_normal([inputSize, outputSize], stddev=1.0 / math.sqrt(float(inputSize)), seed=1), name='weights')
     
     def createBiasMatrix(self, outputSize):
         return tf.Variable(tf.zeros([outputSize]), name='biases')

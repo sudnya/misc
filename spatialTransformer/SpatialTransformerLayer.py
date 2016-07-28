@@ -19,6 +19,7 @@ from ScaledLayer  import ScaledLayer
 from UnitaryLayer import UnitaryLayer
 from ScaledWithOffsetLayer  import ScaledWithOffsetLayer
 from FullyConnectedLayer import FullyConnectedLayer
+from NeuralNetwork import NeuralNetwork
 
 class SpatialTransformerLayer:
     def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType):
@@ -47,8 +48,13 @@ class SpatialTransformerLayer:
         if self.localizationType == "Unitary":
             return UnitaryLayer()
         if self.localizationType == "FullyConnected":
-            return FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 3*4, 0, "ReLu")
-        #if self.localizationType == "Conv2DLayer":
+            network = NeuralNetwork()
+
+            network.addLayer(FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 32, 0, "ReLu"))
+            network.addLayer(FullyConnectedLayer(32, 3*4, 0, "ReLu"))
+
+            return network
+                    #if self.localizationType == "Conv2DLayer":
         #    return Conv2DLayer(self.inputW, self.inputH, self.inputC, 3, 4)
 
     def clampToInputBoundary(self, transformedCoordinates):
