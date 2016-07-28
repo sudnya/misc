@@ -19,12 +19,21 @@ class UnitaryLayer:
         pass
 
     def forward(self, inputData):
-        theta = [
+        theta = [[
                     [1.0, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 0.0]
-                ]
+                ]]
 
-        return tf.constant(theta)
+        theta = tf.constant(theta, dtype=tf.float32)
+
+        zeros = tf.zeros([tf.shape(inputData)[0], 3, 4], dtype=tf.float32)
+
+        theta = tf.add(theta, zeros);
+
+        return theta
+
+    def initialize(self):
+        pass
 
 

@@ -19,11 +19,13 @@ class ScaledWithOffsetLayer:
         pass
 
     def forward(self, inputData):
-        theta  = [   # w_in  h_in  c_in  offset
-                    [0.5,   0.0,  0.0,  0.5], # w_out
+        theta  = [   # c_in  h_in  w_in  offset
+                    [1.0,   0.0,  0.0,  0.0], # c_out
                     [0.0,   0.5,  0.0,  0.5], # h_out
-                    [0.0,   0.0,  1.0,  0.0]  # c_out
+                    [0.0,   0.0,  0.5,  0.5]  # w_out
                  ]
         return tf.constant(theta)
 
 
+    def getWeights(self):
+        return self.weights

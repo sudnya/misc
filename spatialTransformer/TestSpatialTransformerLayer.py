@@ -23,11 +23,16 @@ from SpatialTransformerLayer import SpatialTransformerLayer
 logger = logging.getLogger('TestSpatialTransformerLayer')
 
 def assertEqual(left, right):
+    logger.debug("Identity Test")
+    logger.debug("Original")
+    logger.debug(right)
+    logger.debug("Result")
+    logger.debug(left)
     assert np.isclose(left, right).all()
 
 def assertRotated(left, right):
     logger.debug("Rotation Test")
-    transposedRight = np.transpose(right, (1, 0, 2))
+    transposedRight = np.transpose(right, (0, 1, 3, 2))
     logger.debug("Right")
     logger.debug(right)
     logger.debug("Result")
@@ -67,11 +72,11 @@ def bilinear_interpolation(x, y, points):
            ) / ((x2 - x1) * (y2 - y1) + 0.0)
 
 def upsample2x(right):
-    w = right.shape[0]
-    h = right.shape[1]
-    c = right.shape[2]
+    w = right.shape[3]
+    h = right.shape[2]
+    c = right.shape[1]
 
-    result = np.zeros([w,h,c])
+    result = np.zeros([1,c,h,w])
 
     for indexW in range(w):
         for indexH in range(h):
@@ -106,19 +111,19 @@ def upsample2x(right):
                     floorHIndex = floorH
                     ceilHIndex = ceilH
 
-                points = [(floorW, floorH, right[floorWIndex, floorHIndex, inputC]),
-                          (floorW, ceilH,  right[floorWIndex, ceilHIndex,  inputC]),
-                          (ceilW,  floorH, right[ceilWIndex,  floorHIndex, inputC]),
-                          (ceilW,  ceilH,  right[ceilWIndex,  ceilHIndex,  inputC])]
+                points = [(floorW, floorH, right[0, inputC, floorHIndex, floorWIndex ]),
+                          (floorW, ceilH,  right[0, inputC, ceilHIndex,  floorWIndex ]),
+                          (ceilW,  floorH, right[0, inputC, floorHIndex, ceilWIndex  ]),
+                          (ceilW,  ceilH,  right[0, inputC, ceilHIndex,  ceilWIndex  ])]
 
-                result[indexW, indexH, indexC] = bilinear_interpolation(inputW, inputH, points)
+                result[0, indexC, indexH, indexW] = bilinear_interpolation(inputW, inputH, points)
 
     return result
     
 def assertScaled(left, right):
     logger.debug("Scaled Test")
     scaledRight = upsample2x(right)
-    logger.debug("Right")
+    logger.debug("Original image")
     logger.debug(right)
     logger.debug("Result")
     logger.debug(left)
@@ -145,13 +150,14 @@ def assertManualWithOffset(left, right):
 def runTest():
     imageSize = 4
     imageChannels = 1
+    batchSize = 2
 
     # create spatial transformer layer
     logger.debug("Created new spatial transformer layer")
 
     # create a random image
     np.random.seed(1)
-    image = np.random.rand(imageSize, imageSize, imageChannels)
+    image = np.random.rand(batchSize, imageChannels, imageSize, imageSize)
 
     inputImage = tf.constant(image, dtype=tf.float32)
     
@@ -179,8 +185,9 @@ def runTest():
 
     scalingWithOffsetLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ScaledWithOffset")
     manual = np.arange(1, (imageSize*imageSize + 1), dtype=np.float)
-    manual = np.reshape(manual, (imageSize, imageSize, imageChannels))
+    manual = np.reshape(manual, (batchSize, imageChannels, imageSize, imageSize))
     manualImage = tf.constant(manual, dtype=tf.float32)
+
     scaledWithOffset = scalingWithOffsetLayer.forward(manualImage)
     result4 = session.run(scaledWithOffset)
     assertManualWithOffset(result4, manual)

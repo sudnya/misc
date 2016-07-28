@@ -8,6 +8,9 @@
 #
 ################################################################################
 
+import os
+
+os.environ["LD_LIBRARY_PATH"]= "/usr/local/cuda/lib"
 import tensorflow as tf
 import math
 
@@ -15,6 +18,7 @@ from RotaryLayer  import RotaryLayer
 from ScaledLayer  import ScaledLayer
 from UnitaryLayer import UnitaryLayer
 from ScaledWithOffsetLayer  import ScaledWithOffsetLayer
+from FullyConnectedLayer import FullyConnectedLayer
 
 class SpatialTransformerLayer:
     def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType):
@@ -30,7 +34,8 @@ class SpatialTransformerLayer:
 
         self.localizationNetwork = self.createLocalizationNetwork()
 
-        
+    def initialize(self):
+        self.localizationNetwork.initialize()
 
     def createLocalizationNetwork(self):
         if self.localizationType == "Rotary":
@@ -41,14 +46,14 @@ class SpatialTransformerLayer:
             return ScaledWithOffsetLayer()
         if self.localizationType == "Unitary":
             return UnitaryLayer()
-        #if self.localizationType == "FullyConnected":
-        #    return FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 3*4)
+        if self.localizationType == "FullyConnected":
+            return FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 3*4, 0, "ReLu")
         #if self.localizationType == "Conv2DLayer":
         #    return Conv2DLayer(self.inputW, self.inputH, self.inputC, 3, 4)
 
     def clampToInputBoundary(self, transformedCoordinates):
 
-        sliceW = tf.slice(transformedCoordinates, [0, 0], [tf.shape(transformedCoordinates)[0], 1])
+        sliceW = tf.slice(transformedCoordinates, [0, 2], [tf.shape(transformedCoordinates)[0], 1])
 
         sliceW = tf.maximum(sliceW, tf.constant([0], dtype=tf.float32))
         sliceW = tf.minimum(sliceW, tf.constant([self.inputW], dtype=tf.float32))
@@ -58,27 +63,32 @@ class SpatialTransformerLayer:
         sliceH = tf.maximum(sliceH, tf.constant([0], dtype=tf.float32))
         sliceH = tf.minimum(sliceH, tf.constant([self.inputH], dtype=tf.float32))
 
-        sliceC = tf.slice(transformedCoordinates, [0, 2], [tf.shape(transformedCoordinates)[0], 1])
+        sliceC = tf.slice(transformedCoordinates, [0, 0], [tf.shape(transformedCoordinates)[0], 1])
 
         sliceC = tf.maximum(sliceC, tf.constant([0], dtype=tf.float32))
         sliceC = tf.minimum(sliceC, tf.constant([self.inputC], dtype=tf.float32))
 
-        return tf.concat(1, [sliceW, sliceH, sliceC])
+        return tf.concat(1, [sliceC, sliceH, sliceW])
 
     def forward(self, inputData):
+        #inputData = tf.Print(inputData, [inputData], message= "Input", summarize=100)
+
         #(1). localisation
         #(2). transform with theta
-        theta = self.localizationNetwork.forward(inputData)
+        theta = tf.transpose(tf.reshape(self.localizationNetwork.forward(inputData), [-1, 3, 4]), perm=[2, 0, 1])
+        
+        #theta = tf.Print(theta, [theta], message= "Theta", summarize=100)
 
         #(3). get coordinates in matrix unrolled
         coordinatesMatrix = self.getCoordinates()
+        #coordinatesMatrix = tf.Print(coordinatesMatrix, [coordinatesMatrix], message= "coordinatesMatrix", summarize=100)
 
         #(4). dot product of (3) and (2)
-        ones = tf.ones([tf.shape(coordinatesMatrix)[0], 1], dtype=tf.float32)
+        transformedCoordinates = tf.reshape(tf.matmul(coordinatesMatrix, tf.reshape(theta, [-1, 3 * tf.shape(inputData)[0]])),
+                                            [-1, tf.shape(theta)[1], 3])
+        transformedCoordinates = tf.reshape(tf.transpose(transformedCoordinates, [1, 0, 2]), [-1, 3])
 
-        augmentedCoordinates = tf.concat(1, [coordinatesMatrix, ones])
-
-        transformedCoordinates = tf.transpose(tf.matmul(theta, tf.transpose(augmentedCoordinates)))
+       # transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates", summarize=100)
 
         transformedCoordinates = self.clampToInputBoundary(transformedCoordinates)
 
@@ -86,7 +96,9 @@ class SpatialTransformerLayer:
         outputMatrix = self.bilinear(inputData, transformedCoordinates)
 
         #(6). Step (5) is output matrix --> reshape
-        result = tf.reshape(outputMatrix, [self.outputW, self.outputH, self.outputC])
+        result = tf.reshape(outputMatrix, [-1, self.outputC, self.outputH, self.outputW])
+        
+        #result = tf.Print(result, [result], message= "Result", summarize=100)
 
         return result
         
@@ -103,10 +115,10 @@ class SpatialTransformerLayer:
 
     def getCoordinates(self):
         retVal = []
-        for i in range(0, self.outputW):
+        for i in range(0, self.outputC):
             for j in range(0, self.outputH):
-                for k in range(0, self.outputC):
-                    retVal.append([i, j, k])
+                for k in range(0, self.outputW):
+                    retVal.append([i, j, k, 1.0])
 
         return tf.constant(retVal, dtype=tf.float32)
 
@@ -123,16 +135,27 @@ class SpatialTransformerLayer:
                     (1,1,1)
                 ]
 
+        batchIds = self.getBatchIds(transformedCoordinates)
+
         result = []
 
-        for floorW, floorH, floorC in options:
-            w = self.clampSlice(floorW, transformedCoordinates, 0)
-            h = self.clampSlice(floorH, transformedCoordinates, 1)
-            c = self.clampSlice(floorC, transformedCoordinates, 2)
+        for ceilW, ceilH, ceilC in options:
+            w = self.clampSlice(ceilW, transformedCoordinates, 2)
+            h = self.clampSlice(ceilH, transformedCoordinates, 1)
+            c = self.clampSlice(ceilC, transformedCoordinates, 0)
             
-            result.append(tf.concat(1, [w, h, c]))
+            result.append(tf.concat(1, [batchIds, c, h, w]))
 
         return result
+
+    def getBatchIds(self, transformedCoordinates):
+        batchId = tf.zeros([tf.shape(transformedCoordinates)[0]], dtype=tf.int32)
+        batchId = tf.reshape(batchId, [-1, self.outputC * self.outputH * self.outputW])
+        
+        linearIds = tf.reshape(tf.range(tf.shape(batchId)[0]), [tf.shape(batchId)[0], 1])
+        batchId = tf.reshape(tf.add(linearIds, batchId), [tf.shape(transformedCoordinates)[0], 1])
+
+        return tf.cast(batchId, tf.float32)
 
     def clampSlice(self, shouldCeil, transformedCoordinates, index):
         coordinateSlice = tf.slice(transformedCoordinates, [0, index], [tf.shape(transformedCoordinates)[0], 1])
@@ -148,16 +171,16 @@ class SpatialTransformerLayer:
         return tf.reshape(tf.slice(left, [0, index], [tf.shape(left)[0], 1]), [tf.shape(left)[0]])
 
     def getNeighborWeights(self, transformedCoordinates, clampedCoordinatesList):
-        flooredCoordinates = clampedCoordinatesList[0]
+        flooredCoordinates = tf.slice(clampedCoordinatesList[0], [0, 1], [tf.shape(clampedCoordinatesList[0])[0], 3])
 
         #transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], summarize=1000)
         #flooredCoordinates = tf.Print(flooredCoordinates, [flooredCoordinates], summarize=1000)
         deltas = tf.sub(transformedCoordinates, flooredCoordinates)
         #deltas = tf.Print(deltas, [deltas], summarize=1000)
 
-        deltaW = self.sliceIndex(deltas, 0)
+        deltaW = self.sliceIndex(deltas, 2)
         deltaH = self.sliceIndex(deltas, 1)
-        deltaC = self.sliceIndex(deltas, 2)
+        deltaC = self.sliceIndex(deltas, 0)
 
         #deltaW = tf.Print(deltaW, [deltaW], summarize=1000)
         #deltaH = tf.Print(deltaH, [deltaH], summarize=1000)
@@ -198,6 +221,26 @@ class SpatialTransformerLayer:
 
         return weightList
 
+    def gatherData(self, inputData, sampledPositions):
+
+        result = []
+
+        flatInputData = tf.reshape(inputData, [-1])
+
+        inputShape = tf.shape(inputData)
+
+        inputStrides = tf.constant([[self.inputW * self.inputH * self.inputC], [self.inputW * self.inputH], [self.inputW], [1]],
+                dtype=tf.float32)
+
+        for positions in sampledPositions:
+
+            flatPositions = tf.reshape(tf.matmul(positions, inputStrides), [-1])
+
+            gatheredData = tf.gather(flatInputData, tf.to_int64(flatPositions))
+
+            result.append(gatheredData)
+
+        return result
 
     def bilinear(self, inputData, transformedCoordinates):
         # (1). for each input dimension get all nearest neighbors -> 2^n for n dims
@@ -207,7 +250,7 @@ class SpatialTransformerLayer:
         weightedDistance = self.getNeighborWeights(transformedCoordinates, sampledPositions)
         
         # (3). get inputData value at that location
-        data = [tf.gather_nd(inputData, tf.to_int64(positions)) for positions in sampledPositions]
+        data = self.gatherData(inputData, sampledPositions)
         
         # (4). multiply weight with value
         accumulator = tf.zeros(tf.shape(data[0]), dtype=tf.float32)
