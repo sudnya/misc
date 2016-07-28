@@ -27,6 +27,8 @@ class ConvLayer:
         self.filterSize = filterSize
         self.idx = idx
         self.nonlinearityType = nonlinearityType
+        
+        self.nonlinearity = NonLinearityFactory.create(self.nonlinearityType)
 
     def initialize(self):
 
@@ -40,8 +42,9 @@ class ConvLayer:
     def forward(self, inputData):
         inputData = tf.reshape(inputData, [-1, self.inputSize[2], self.inputSize[1], self.inputSize[0]])
         result = tf.nn.conv2d(inputData, self.filterM, self.strides, self.padding, use_cudnn_on_gpu=None, data_format=self.dataFormat, name=None)
+        result = tf.add(result, self.filterB)
 
-        return tf.add(result, self.filterB)
+        return self.nonlinearity.forward(result)
 
     def getWeights(self):
         return self.weights
