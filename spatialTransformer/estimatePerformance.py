@@ -1,9 +1,9 @@
 ###############################################################################
 #
-# \file    sweepEstimate.py
-# \author  Sudnya Padalikar <sudnya@attune.co>
-# \date    Friday July 1, 2016
-# \brief   A python script to estimate performance of various configurations
+# \file    estimatePerformance.py
+# \author  Sudnya Padalikar <mailsudnya@gmail.com>
+# \date    Thursday July 28, 2016
+# \brief   A python script to estimate performance of spatial transformer layer
 #
 ###############################################################################
 
@@ -12,7 +12,7 @@ import argparse
 import logging
 import json
 
-logger = logging.getLogger('sweepEstimate')
+logger = logging.getLogger('estimatePerformance')
 
 def getTotalImageSize(dims):
     retVal = 1
@@ -33,24 +33,19 @@ def getFilterSize(fil, imageSize):
 def estimateLocalizationNetworkPerformanceWithRooflineModel(imageSize, filterSize, layers, gpuPerformance):
     imageBytes  = (getInputSize(imageSize) + getOutputSize(imageSize)) * gpuPerformance['word-size'] * gpuPerformance['mini-batch-size']
     filterBytes = getFilterSize(filterSize, imageSize) * gpuPerformance['word-size']
-
-    totalBytes = layers * (imageBytes + filterBytes)
+    totalBytes  = layers * (imageBytes + filterBytes)
 
     dataLoadAndStoreTime = totalBytes / (gpuPerformance['bandwidth'] * gpuPerformance['cudnn-memory-efficiency'])
 
-    totalFlops = gpuPerformance['mini-batch-size'] * getTotalImageSize(imageSize) * filterSize * filterSize * 2 * layers
-
-    totalThreads = gpuPerformance['sms'] * gpuPerformance['datapaths-per-sm']
-
+    totalFlops     = gpuPerformance['mini-batch-size'] * getTotalImageSize(imageSize) * filterSize * filterSize * 2 * layers
+    totalThreads   = gpuPerformance['sms'] * gpuPerformance['datapaths-per-sm']
     flopsPerThread = totalFlops / totalThreads
 
-    utilization = min(gpuPerformance['work-per-datapath'], flopsPerThread) / gpuPerformance['work-per-datapath']
-
+    utilization   = min(gpuPerformance['work-per-datapath'], flopsPerThread) / gpuPerformance['work-per-datapath']
     totalMathTime = totalFlops / (gpuPerformance['flops'] * utilization * gpuPerformance['cudnn-math-efficiency'])
 
     kernelTime = max(totalMathTime, dataLoadAndStoreTime)
-
-    totalTime = kernelTime + gpuPerformance['kernel-overhead'] * layers
+    totalTime  = kernelTime + gpuPerformance['kernel-overhead'] * layers
 
     logger.info("    Localization mem time: " +
         str(dataLoadAndStoreTime * 1.0e6) + " us, math time: " + str(totalMathTime * 1.0e6) +
@@ -61,25 +56,21 @@ def estimateLocalizationNetworkPerformanceWithRooflineModel(imageSize, filterSiz
 
 def estimateCoordinateTransformPerformanceWithRooflineModel(imageSize, gpuPerformance):
     coordinateBytes  = (getInputSize(imageSize) * 4) * gpuPerformance['word-size'] * gpuPerformance['mini-batch-size']
-    thetaBytes = (4*3) * gpuPerformance['word-size'] * gpuPerformance['mini-batch-size']
-
-    totalBytes = (coordinateBytes + thetaBytes)
+    thetaBytes       = (4*3) * gpuPerformance['word-size'] * gpuPerformance['mini-batch-size']
+    totalBytes       = (coordinateBytes + thetaBytes)
 
     dataLoadAndStoreTime = totalBytes / (gpuPerformance['bandwidth'] * gpuPerformance['cublas-memory-efficiency'])
 
-    totalFlops = gpuPerformance['mini-batch-size'] * getTotalImageSize(imageSize) * 3 * 4 * 2
-
+    totalFlops   = gpuPerformance['mini-batch-size'] * getTotalImageSize(imageSize) * 3 * 4 * 2
     totalThreads = gpuPerformance['sms'] * gpuPerformance['datapaths-per-sm']
 
     flopsPerThread = totalFlops / totalThreads
 
-    utilization = min(gpuPerformance['work-per-datapath'], flopsPerThread) / gpuPerformance['work-per-datapath']
-
+    utilization   = min(gpuPerformance['work-per-datapath'], flopsPerThread) / gpuPerformance['work-per-datapath']
     totalMathTime = totalFlops / (gpuPerformance['flops'] * utilization * gpuPerformance['cublas-math-efficiency'])
 
     kernelTime = max(totalMathTime, dataLoadAndStoreTime)
-
-    totalTime = kernelTime + gpuPerformance['kernel-overhead']
+    totalTime  = kernelTime + gpuPerformance['kernel-overhead']
 
     logger.info("    Coordinate transform mem time: " +
         str(dataLoadAndStoreTime * 1.0e6) + " us, math time: " + str(totalMathTime * 1.0e6) +
@@ -161,9 +152,6 @@ def generateEstimates():
             for imageSize in imageSizes:
                 logger.info("  For image size " + str(imageSize))
                 estimatePerformanceWithRooflineModel(imageSize, filterSize, layerCount, gpuPerformance)
-
-
-
 
 
 def main():
