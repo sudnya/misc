@@ -47,7 +47,7 @@ IMAGE_SIZE = 28
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 IMAGE_CHANNELS = 1
 
-def inference(images, hidden1_units, hidden2_units):
+def inference(images, hidden1_units, hidden2_units, isVerbose):
   """Build the MNIST model up to where it may be used for inference.
 
   Args:
@@ -69,7 +69,9 @@ def inference(images, hidden1_units, hidden2_units):
           [((IMAGE_SIZE, IMAGE_SIZE, IMAGE_CHANNELS), (IMAGE_SIZE, IMAGE_SIZE, IMAGE_CHANNELS)),
            (IMAGE_PIXELS, hidden1_units),
            (hidden1_units, hidden2_units),
-           (hidden2_units, NUM_CLASSES)])
+           (hidden2_units, NUM_CLASSES)],
+           isVerbose)
+           
 
   network.initialize()
 

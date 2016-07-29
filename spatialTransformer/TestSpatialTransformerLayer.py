@@ -75,48 +75,50 @@ def upsample2x(right):
     w = right.shape[3]
     h = right.shape[2]
     c = right.shape[1]
+    n = right.shape[0]
 
-    result = np.zeros([1,c,h,w])
+    result = np.zeros([n,c,h,w])
 
-    for indexW in range(w):
-        for indexH in range(h):
-            for indexC in range(c):
-                inputW = indexW * 0.5
-                inputH = indexH * 0.5
-                inputC = indexC
+    for indexN in range(n):
+        for indexW in range(w):
+            for indexH in range(h):
+                for indexC in range(c):
+                    inputW = indexW * 0.5
+                    inputH = indexH * 0.5
+                    inputC = indexC
 
-                if indexW % 2 == 0:
-                    floorW = max(0, inputW - 1)
-                    ceilW  = min(w, inputW + 1)
+                    if indexW % 2 == 0:
+                        floorW = max(0, inputW - 1)
+                        ceilW  = min(w, inputW + 1)
 
-                    floorWIndex = int(inputW)
-                    ceilWIndex = int(inputW)
-                else:
-                    floorW = int(np.floor(inputW))
-                    ceilW  = int(np.ceil(inputW))
+                        floorWIndex = int(inputW)
+                        ceilWIndex = int(inputW)
+                    else:
+                        floorW = int(np.floor(inputW))
+                        ceilW  = int(np.ceil(inputW))
 
-                    floorWIndex = floorW
-                    ceilWIndex = ceilW
-                
-                if indexH % 2 == 0:
-                    floorH = max(0, inputH - 1)
-                    ceilH  = min(h, inputH + 1)
+                        floorWIndex = floorW
+                        ceilWIndex = ceilW
                     
-                    floorHIndex = int(inputH)
-                    ceilHIndex = int(inputH)
-                else:
-                    floorH = int(np.floor(inputH))
-                    ceilH  = int(np.ceil(inputH))
-                    
-                    floorHIndex = floorH
-                    ceilHIndex = ceilH
+                    if indexH % 2 == 0:
+                        floorH = max(0, inputH - 1)
+                        ceilH  = min(h, inputH + 1)
+                        
+                        floorHIndex = int(inputH)
+                        ceilHIndex = int(inputH)
+                    else:
+                        floorH = int(np.floor(inputH))
+                        ceilH  = int(np.ceil(inputH))
+                        
+                        floorHIndex = floorH
+                        ceilHIndex = ceilH
 
-                points = [(floorW, floorH, right[0, inputC, floorHIndex, floorWIndex ]),
-                          (floorW, ceilH,  right[0, inputC, ceilHIndex,  floorWIndex ]),
-                          (ceilW,  floorH, right[0, inputC, floorHIndex, ceilWIndex  ]),
-                          (ceilW,  ceilH,  right[0, inputC, ceilHIndex,  ceilWIndex  ])]
+                    points = [(floorW, floorH, right[indexN, inputC, floorHIndex, floorWIndex ]),
+                              (floorW, ceilH,  right[indexN, inputC, ceilHIndex,  floorWIndex ]),
+                              (ceilW,  floorH, right[indexN, inputC, floorHIndex, ceilWIndex  ]),
+                              (ceilW,  ceilH,  right[indexN, inputC, ceilHIndex,  ceilWIndex  ])]
 
-                result[0, indexC, indexH, indexW] = bilinear_interpolation(inputW, inputH, points)
+                    result[indexN, indexC, indexH, indexW] = bilinear_interpolation(inputW, inputH, points)
 
     return result
     
@@ -183,9 +185,10 @@ def runTest():
     assertScaled(result3, image)
     logger.info ('Scaling Test Passed')
 
+    #TODO: batch size > 1
     scalingWithOffsetLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ScaledWithOffset")
     manual = np.arange(1, (imageSize*imageSize + 1), dtype=np.float)
-    manual = np.reshape(manual, (batchSize, imageChannels, imageSize, imageSize))
+    manual = np.reshape(manual, (1, imageChannels, imageSize, imageSize))
     manualImage = tf.constant(manual, dtype=tf.float32)
 
     scaledWithOffset = scalingWithOffsetLayer.forward(manualImage)

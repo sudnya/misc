@@ -9,11 +9,10 @@
 
 import logging
 
-from ConvLayer import ConvLayer
-from FullyConnectedLayer import FullyConnectedLayer
+from ConvLayer               import ConvLayer
+from FullyConnectedLayer     import FullyConnectedLayer
 from SpatialTransformerLayer import SpatialTransformerLayer
-
-from NeuralNetwork import NeuralNetwork
+from NeuralNetwork           import NeuralNetwork
 
 logger = logging.getLogger('NeuralNetworkBuilder')
 
@@ -60,8 +59,9 @@ class NeuralNetworkBuilder:
 
         return network
 
+
     @staticmethod
-    def createSpatialTransformerWithFullyConnectedNetwork(parameters):
+    def createSpatialTransformerWithFullyConnectedNetwork(parameters, isVerbose):
         logger.info ("Creating a fully connected network with a spatial transformer input layer")
         network = NeuralNetwork()
         

@@ -127,7 +127,7 @@ def do_eval(sess,
         (num_examples, true_count, precision))
 
 
-def run_training():
+def run_training(isVerbose):
   """Train MNIST for a number of steps."""
   # Get the sets of images and labels for training, validation, and
   # test on MNIST.
@@ -142,7 +142,8 @@ def run_training():
     # Build a Graph that computes predictions from the inference model.
     logits = mnist.inference(images_placeholder,
                              FLAGS.hidden1,
-                             FLAGS.hidden2)
+                             FLAGS.hidden2,
+                             isVerbose)
 
     # Add to the Graph the Ops for loss calculation.
     loss = mnist.loss(logits, labels_placeholder)
@@ -234,7 +235,7 @@ def main(_):
     logging.basicConfig(level=logging.DEBUG)
   else:
     logging.basicConfig(level=logging.INFO)
-  run_training()
+  run_training(FLAGS.verbose)
 
 
 if __name__ == '__main__':

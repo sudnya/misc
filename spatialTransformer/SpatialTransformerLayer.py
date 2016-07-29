@@ -1,6 +1,6 @@
 ################################################################################
 #
-# \file    TestSpatialTransformerLayer.py
+# \file    SpatialTransformerLayer.py
 # \author  Sudnya Padalikar <mailsudnya@gmail.com>
 # \date    Friday July 22, 2016
 # \brief   A python script to implement the SpatialTransformerLayer 
@@ -11,19 +11,26 @@
 import os
 
 os.environ["LD_LIBRARY_PATH"]= "/usr/local/cuda/lib"
-import tensorflow as tf
-import math
 
-from RotaryLayer  import RotaryLayer
-from ScaledLayer  import ScaledLayer
-from UnitaryLayer import UnitaryLayer
-from ScaledWithOffsetLayer  import ScaledWithOffsetLayer
-from FullyConnectedLayer import FullyConnectedLayer
-from ConvLayer import ConvLayer
-from NeuralNetwork import NeuralNetwork
+import logging
+import math
+import tensorflow as tf
+
+from RotaryLayer           import RotaryLayer
+from ScaledLayer           import ScaledLayer
+from UnitaryLayer          import UnitaryLayer
+from ScaledWithOffsetLayer import ScaledWithOffsetLayer
+from FullyConnectedLayer   import FullyConnectedLayer
+from ConvLayer             import ConvLayer
+from NeuralNetwork         import NeuralNetwork
+
+
+logger = logging.getLogger('SpatialTransformerLayer')
+
 
 class SpatialTransformerLayer:
-    def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType):
+    def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType, isVerbose = False):
+
         self.inputW = inputW
         self.inputH = inputH
         self.inputC = inputC
@@ -33,35 +40,42 @@ class SpatialTransformerLayer:
         self.outputC = outputC
 
         self.localizationType = locType
-
         self.localizationNetwork = self.createLocalizationNetwork()
+
+        self.isVerbose = isVerbose
+
 
     def initialize(self):
         self.localizationNetwork.initialize()
 
+
     def createLocalizationNetwork(self):
+        
         if self.localizationType == "Rotary":
             return RotaryLayer()
+        
         if self.localizationType == "Scaled":
             return ScaledLayer()
+        
         if self.localizationType == "ScaledWithOffset":
             return ScaledWithOffsetLayer()
+        
         if self.localizationType == "Unitary":
             return UnitaryLayer()
+        
         if self.localizationType == "FullyConnected":
             network = NeuralNetwork()
-
             network.addLayer(FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 32, 0, "ReLu"))
             network.addLayer(FullyConnectedLayer(32, 3*4, 1, "ReLu"))
-
             return network
+
         if self.localizationType == "ConvLayer":
             network = NeuralNetwork()
-            
             network.addLayer(ConvLayer((self.inputW, self.inputH, self.inputC), (3, 3, self.inputC, self.inputC), 0, "ReLu"))
             network.addLayer(FullyConnectedLayer(self.inputW * self.inputH * self.inputC, 3*4, 1, "ReLu"))
-
             return network
+
+
 
     def clampToInputBoundary(self, transformedCoordinates):
 
@@ -83,24 +97,29 @@ class SpatialTransformerLayer:
         return tf.concat(1, [sliceC, sliceH, sliceW])
 
     def forward(self, inputData):
-        #inputData = tf.Print(inputData, [inputData], message= "Input", summarize=100)
+        if self.isVerbose:
+            inputData = tf.Print(inputData, [inputData], message= "Input", summarize=100)
 
         #(1). localisation
         #(2). transform with theta
         theta = tf.transpose(tf.reshape(self.localizationNetwork.forward(inputData), [-1, 3, 4]), perm=[2, 0, 1])
         
-        #theta = tf.Print(theta, [theta], message= "Theta", summarize=100)
+        if self.isVerbose:
+            theta = tf.Print(theta, [theta], message= "Theta", summarize=100)
 
         #(3). get coordinates in matrix unrolled
         coordinatesMatrix = self.getCoordinates()
-        #coordinatesMatrix = tf.Print(coordinatesMatrix, [coordinatesMatrix], message= "coordinatesMatrix", summarize=100)
+        
+        if self.isVerbose:
+            coordinatesMatrix = tf.Print(coordinatesMatrix, [coordinatesMatrix], message= "coordinatesMatrix", summarize=100)
 
         #(4). dot product of (3) and (2)
         transformedCoordinates = tf.reshape(tf.matmul(coordinatesMatrix, tf.reshape(theta, [-1, 3 * tf.shape(inputData)[0]])),
                                             [-1, tf.shape(theta)[1], 3])
         transformedCoordinates = tf.reshape(tf.transpose(transformedCoordinates, [1, 0, 2]), [-1, 3])
 
-       # transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates", summarize=100)
+        if self.isVerbose:
+           transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates", summarize=100)
 
         transformedCoordinates = self.clampToInputBoundary(transformedCoordinates)
 
@@ -110,7 +129,8 @@ class SpatialTransformerLayer:
         #(6). Step (5) is output matrix --> reshape
         result = tf.reshape(outputMatrix, [-1, self.outputC, self.outputH, self.outputW])
         
-        #result = tf.Print(result, [result], message= "Result", summarize=100)
+        if self.isVerbose:
+            result = tf.Print(result, [result], message= "Result", summarize=100)
 
         return result
         
@@ -161,6 +181,7 @@ class SpatialTransformerLayer:
         return result
 
     def getBatchIds(self, transformedCoordinates):
+
         batchId = tf.zeros([tf.shape(transformedCoordinates)[0]], dtype=tf.int32)
         batchId = tf.reshape(batchId, [-1, self.outputC * self.outputH * self.outputW])
         
@@ -169,7 +190,9 @@ class SpatialTransformerLayer:
 
         return tf.cast(batchId, tf.float32)
 
+
     def clampSlice(self, shouldCeil, transformedCoordinates, index):
+
         coordinateSlice = tf.slice(transformedCoordinates, [0, index], [tf.shape(transformedCoordinates)[0], 1])
 
         if not shouldCeil:
@@ -185,18 +208,23 @@ class SpatialTransformerLayer:
     def getNeighborWeights(self, transformedCoordinates, clampedCoordinatesList):
         flooredCoordinates = tf.slice(clampedCoordinatesList[0], [0, 1], [tf.shape(clampedCoordinatesList[0])[0], 3])
 
-        #transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], summarize=1000)
-        #flooredCoordinates = tf.Print(flooredCoordinates, [flooredCoordinates], summarize=1000)
+        if self.isVerbose:
+            transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], summarize=1000)
+            flooredCoordinates     = tf.Print(flooredCoordinates, [flooredCoordinates], summarize=1000)
+        
         deltas = tf.sub(transformedCoordinates, flooredCoordinates)
-        #deltas = tf.Print(deltas, [deltas], summarize=1000)
+        
+        if self.isVerbose:
+            deltas = tf.Print(deltas, [deltas], summarize=1000)
 
         deltaW = self.sliceIndex(deltas, 2)
         deltaH = self.sliceIndex(deltas, 1)
         deltaC = self.sliceIndex(deltas, 0)
 
-        #deltaW = tf.Print(deltaW, [deltaW], summarize=1000)
-        #deltaH = tf.Print(deltaH, [deltaH], summarize=1000)
-        #deltaC = tf.Print(deltaC, [deltaC], summarize=1000)
+        if self.isVerbose:
+            deltaW = tf.Print(deltaW, [deltaW], summarize=1000)
+            deltaH = tf.Print(deltaH, [deltaH], summarize=1000)
+            deltaC = tf.Print(deltaC, [deltaC], summarize=1000)
 
         #just declare for concisely writing the various weights
         ConstantOne = tf.constant([1], dtype=tf.float32)
@@ -210,14 +238,15 @@ class SpatialTransformerLayer:
         W_uul = tf.mul(tf.mul(deltaW                      , deltaH                     ) , tf.sub(ConstantOne, deltaC))
         W_uuu = tf.mul(tf.mul(deltaW                      , deltaH                     ) , deltaC                     )
 
-        #W_lll = tf.Print(W_lll, [W_llu], summarize=1000)
-        #W_llu = tf.Print(W_llu, [W_lll], summarize=1000)
-        #W_lul = tf.Print(W_lul, [W_lul], summarize=1000)
-        #W_luu = tf.Print(W_luu, [W_luu], summarize=1000)
-        #W_ull = tf.Print(W_ull, [W_ull], summarize=1000)
-        #W_ulu = tf.Print(W_ulu, [W_ulu], summarize=1000)
-        #W_uul = tf.Print(W_uul, [W_uul], summarize=1000)
-        #W_uuu = tf.Print(W_uuu, [W_uuu], summarize=1000)
+        if self.isVerbose:
+            W_lll = tf.Print(W_lll, [W_llu], summarize=1000)
+            W_llu = tf.Print(W_llu, [W_lll], summarize=1000)
+            W_lul = tf.Print(W_lul, [W_lul], summarize=1000)
+            W_luu = tf.Print(W_luu, [W_luu], summarize=1000)
+            W_ull = tf.Print(W_ull, [W_ull], summarize=1000)
+            W_ulu = tf.Print(W_ulu, [W_ulu], summarize=1000)
+            W_uul = tf.Print(W_uul, [W_uul], summarize=1000)
+            W_uuu = tf.Print(W_uuu, [W_uuu], summarize=1000)
 
         weightList = []
 
@@ -239,17 +268,14 @@ class SpatialTransformerLayer:
 
         flatInputData = tf.reshape(inputData, [-1])
 
-        inputShape = tf.shape(inputData)
+        inputShape    = tf.shape(inputData)
 
-        inputStrides = tf.constant([[self.inputW * self.inputH * self.inputC], [self.inputW * self.inputH], [self.inputW], [1]],
+        inputStrides  = tf.constant([[self.inputW * self.inputH * self.inputC], [self.inputW * self.inputH], [self.inputW], [1]],
                 dtype=tf.float32)
 
         for positions in sampledPositions:
-
             flatPositions = tf.reshape(tf.matmul(positions, inputStrides), [-1])
-
-            gatheredData = tf.gather(flatInputData, tf.to_int64(flatPositions))
-
+            gatheredData  = tf.gather(flatInputData, tf.to_int64(flatPositions))
             result.append(gatheredData)
 
         return result
@@ -270,6 +296,5 @@ class SpatialTransformerLayer:
         for value, weight in zip(data, weightedDistance):
             accumulator = tf.add(tf.mul(value, weight), accumulator)
 
-        #accumulator = tf.Print(accumulator, [accumulator], summarize=1000)
         return accumulator
 
