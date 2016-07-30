@@ -100,6 +100,9 @@ class SpatialTransformerLayer:
         if self.isVerbose:
             inputData = tf.Print(inputData, [inputData], message= "Input", summarize=100)
 
+        # (interpret channels as separate batches)
+        inputData = tf.reshape(inputData, [-1, 1, self.inputH, self.inputW])
+
         #(1). localisation
         #(2). transform with theta
         theta = tf.transpose(tf.reshape(self.localizationNetwork.forward(inputData), [-1, 3, 4]), perm=[2, 0, 1])
