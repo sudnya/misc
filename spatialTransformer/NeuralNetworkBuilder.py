@@ -76,7 +76,7 @@ class NeuralNetworkBuilder:
 
             if idx == 0:
                 network.addLayer(SpatialTransformerLayer(inputSize[0], inputSize[1], inputSize[2],
-                    outputSize[0], outputSize[1], outputSize[2], "FullyConnected"))
+                    outputSize[0], outputSize[1], outputSize[2], "ConvLayer"))
             else:
                 network.addLayer(FullyConnectedLayer(inputSize, outputSize, idx, nonlinearity))
             idx += 1

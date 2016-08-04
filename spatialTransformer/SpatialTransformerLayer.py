@@ -29,15 +29,23 @@ logger = logging.getLogger('SpatialTransformerLayer')
 
 
 class SpatialTransformerLayer:
-    def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType, isVerbose = False):
+    def __init__(self, inputW, inputH, inputC, outputW, outputH, outputC, locType, isVerbose = False, treatChannelsSeparate=True):
+
+        self.treatChannelsSeparate = treatChannelsSeparate
 
         self.inputW = inputW
         self.inputH = inputH
-        self.inputC = inputC
+        if treatChannelsSeparate:
+            self.inputC = 1
+        else:
+            self.inputC = inputC
 
         self.outputW = outputW
         self.outputH = outputH
-        self.outputC = outputC
+        if treatChannelsSeparate:
+            self.outputC = 1
+        else:
+            self.outputC = outputC
 
         self.localizationType = locType
         self.localizationNetwork = self.createLocalizationNetwork()
@@ -99,9 +107,11 @@ class SpatialTransformerLayer:
     def forward(self, inputData):
         if self.isVerbose:
             inputData = tf.Print(inputData, [inputData], message= "Input", summarize=100)
+        logger.debug("Input data shape: " + str(inputData.get_shape()))
 
         # (interpret channels as separate batches)
-        inputData = tf.reshape(inputData, [-1, 1, self.inputH, self.inputW])
+        if self.treatChannelsSeparate:
+            inputData = tf.reshape(inputData, [-1, 1, self.inputH, self.inputW])
 
         #(1). localisation
         #(2). transform with theta
@@ -109,6 +119,7 @@ class SpatialTransformerLayer:
         
         if self.isVerbose:
             theta = tf.Print(theta, [theta], message= "Theta", summarize=100)
+        logger.debug("Theta shape: " + str(theta.get_shape()))
 
         #(3). get coordinates in matrix unrolled
         coordinatesMatrix = self.getCoordinates()

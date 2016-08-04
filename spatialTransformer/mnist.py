@@ -59,21 +59,15 @@ def inference(images, hidden1_units, hidden2_units, isVerbose):
     softmax_linear: Output tensor with the computed logits.
   """
 
-  #network = NeuralNetworkBuilder.createFullyConnectedNetwork(
-  #        [(IMAGE_PIXELS, hidden1_units), (hidden1_units, hidden2_units), (hidden2_units, NUM_CLASSES)])
-  #network = NeuralNetworkBuilder.createConvNetwork(
-  #        [((IMAGE_SIZE, IMAGE_SIZE, IMAGE_CHANNELS), (3, 3, hidden1_units)),
-  #          ((IMAGE_SIZE, IMAGE_SIZE, hidden1_units), (3, 3, hidden2_units)), 
-  #          (hidden2_units * IMAGE_PIXELS, NUM_CLASSES)])
   network = NeuralNetworkBuilder.createSpatialTransformerWithFullyConnectedNetwork(
           [((IMAGE_SIZE, IMAGE_SIZE, IMAGE_CHANNELS), (IMAGE_SIZE, IMAGE_SIZE, IMAGE_CHANNELS)),
            (IMAGE_PIXELS, hidden1_units),
            (hidden1_units, hidden2_units),
            (hidden2_units, NUM_CLASSES)],
            isVerbose)
-           
-
   network.initialize()
+
+
 
   result = network.forward(images)
 
@@ -163,6 +157,7 @@ def training(loss, learning_rate):
   # Use the optimizer to apply the gradients that minimize the loss
   # (and also increment the global step counter) as a single training step.
   train_op = optimizer.minimize(loss, global_step=global_step)
+
   return train_op
 
 
