@@ -18,6 +18,7 @@ import tensorflow as tf
 
 from RotaryLayer           import RotaryLayer
 from ScaledLayer           import ScaledLayer
+from ScaledUpLayer         import ScaledUpLayer
 from UnitaryLayer          import UnitaryLayer
 from ScaledWithOffsetLayer import ScaledWithOffsetLayer
 from FullyConnectedLayer   import FullyConnectedLayer
@@ -68,6 +69,9 @@ class SpatialTransformerLayer:
         if self.localizationType == "Scaled":
             return ScaledLayer()
         
+        if self.localizationType == "ScaledUp":
+            return ScaledUpLayer()
+        
         if self.localizationType == "ScaledWithOffset":
             return ScaledWithOffsetLayer()
         
@@ -93,17 +97,17 @@ class SpatialTransformerLayer:
         sliceW = tf.slice(transformedCoordinates, [0, 2], [tf.shape(transformedCoordinates)[0], 1])
 
         sliceW = tf.maximum(sliceW, tf.constant([0], dtype=tf.float32))
-        sliceW = tf.minimum(sliceW, tf.constant([self.inputW], dtype=tf.float32))
+        sliceW = tf.minimum(sliceW, tf.constant([self.inputW-1], dtype=tf.float32))
         
         sliceH = tf.slice(transformedCoordinates, [0, 1], [tf.shape(transformedCoordinates)[0], 1])
 
         sliceH = tf.maximum(sliceH, tf.constant([0], dtype=tf.float32))
-        sliceH = tf.minimum(sliceH, tf.constant([self.inputH], dtype=tf.float32))
+        sliceH = tf.minimum(sliceH, tf.constant([self.inputH-1], dtype=tf.float32))
 
         sliceC = tf.slice(transformedCoordinates, [0, 0], [tf.shape(transformedCoordinates)[0], 1])
 
         sliceC = tf.maximum(sliceC, tf.constant([0], dtype=tf.float32))
-        sliceC = tf.minimum(sliceC, tf.constant([self.inputC], dtype=tf.float32))
+        sliceC = tf.minimum(sliceC, tf.constant([self.inputC-1], dtype=tf.float32))
 
         return tf.concat(1, [sliceC, sliceH, sliceW])
 
@@ -136,10 +140,12 @@ class SpatialTransformerLayer:
         transformedCoordinates = tf.reshape(tf.transpose(transformedCoordinates, [1, 0, 2]), [-1, 3])
 
         if self.isVerbose:
-           transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates", summarize=100)
+            transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates before", summarize=100)
 
         transformedCoordinates = self.clampToInputBoundary(transformedCoordinates)
 
+        if self.isVerbose:
+            transformedCoordinates = tf.Print(transformedCoordinates, [transformedCoordinates], message= "transformedCoordinates after", summarize=100)
         #(5). bi-linear sampling at input matrix where coordinates are transformed from step (4)
         outputMatrix = self.bilinear(inputData, transformedCoordinates)
 
@@ -292,6 +298,9 @@ class SpatialTransformerLayer:
 
         for positions in sampledPositions:
             flatPositions = tf.reshape(tf.matmul(positions, inputStrides), [-1])
+            #flatPositions = tf.Print(flatPositions, [flatPositions], message= "flatPositions after reshape", summarize=100)
+
+
             gatheredData  = tf.gather(flatInputData, tf.to_int64(flatPositions))
             result.append(gatheredData)
 

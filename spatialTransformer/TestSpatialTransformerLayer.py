@@ -158,6 +158,47 @@ def assertManualWithOffset(left, right):
     logger.debug(reference)
     assert np.isclose(left, reference).all()
 
+def testScaledUp(session):
+    imageSize = 4
+    imageChannels = 1
+    batchSize = 2
+    
+    # create a random image
+    np.random.seed(1)
+    image = np.random.rand(batchSize, imageChannels, imageSize, imageSize)
+
+    inputImage = tf.constant(image, dtype=tf.float32)
+    
+    scalingLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ScaledUp")
+    scaled = scalingLayer.forward(inputImage)
+    result3 = session.run(scaled)
+    
+    #TODO: compute ref and add some check here
+    #assertScaledUp(result3, image)
+    #logger.info ('Scaling up Test Passed')
+
+def testConvDim(session):
+    imageSize = 4
+    imageChannels = 3
+    batchSize = 2
+    
+    np.random.seed(1)
+    convImage = np.random.rand(batchSize, imageChannels, imageSize, imageSize)
+
+    convInputImage = tf.constant(convImage, dtype=tf.float32)
+    
+    
+    convLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ConvLayer")
+    convLayer.initialize()
+
+    init_op = tf.initialize_all_variables()
+
+    session.run(init_op)
+
+    conv      = convLayer.forward(convInputImage)
+    result5   = session.run(conv)
+    assertConvDim(result5, convImage)
+    logger.info ('Conv dimension Test Passed')
 
 def runTest():
     imageSize = 4
@@ -175,6 +216,8 @@ def runTest():
     
     session = tf.Session()
 
+    testScaledUp(session)
+    
     identityLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "Unitary")
     identity      = identityLayer.forward(inputImage)
     result1       = session.run(identity)
@@ -207,27 +250,7 @@ def runTest():
     logger.info ('Scaling with offset Test Passed')
 
 
-    imageSize = 4
-    imageChannels = 3
-    batchSize = 2
-    
-    np.random.seed(1)
-    convImage = np.random.rand(batchSize, imageChannels, imageSize, imageSize)
-
-    convInputImage = tf.constant(convImage, dtype=tf.float32)
-    
-    
-    convLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ConvLayer")
-    convLayer.initialize()
-
-    init_op = tf.initialize_all_variables()
-
-    session.run(init_op)
-
-    conv      = convLayer.forward(convInputImage)
-    result5   = session.run(conv)
-    assertConvDim(result5, convImage)
-    logger.info ('Conv dimension Test Passed')
+    testConvDim(session)
 
 
 
