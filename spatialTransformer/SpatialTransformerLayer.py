@@ -39,6 +39,7 @@ class SpatialTransformerLayer:
             self.inputC = 1
         else:
             self.inputC = inputC
+        
 
         self.outputW = outputW
         self.outputH = outputH
@@ -47,7 +48,9 @@ class SpatialTransformerLayer:
         else:
             self.outputC = outputC
 
-        self.localizationType = locType
+        #self.expectedInputC      = inputC
+        self.expectedOutputC     = outputC
+        self.localizationType    = locType
         self.localizationNetwork = self.createLocalizationNetwork()
 
         self.isVerbose = isVerbose
@@ -141,7 +144,7 @@ class SpatialTransformerLayer:
         outputMatrix = self.bilinear(inputData, transformedCoordinates)
 
         #(6). Step (5) is output matrix --> reshape
-        result = tf.reshape(outputMatrix, [-1, self.outputC, self.outputH, self.outputW])
+        result = tf.reshape(outputMatrix, [-1, self.expectedOutputC, self.outputH, self.outputW])
         
         if self.isVerbose:
             result = tf.Print(result, [result], message= "Result", summarize=100)

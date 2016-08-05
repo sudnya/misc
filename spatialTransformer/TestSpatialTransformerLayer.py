@@ -134,6 +134,16 @@ def assertScaled(left, right):
     assert np.isclose(left, scaledRight).all()
 
 
+def assertConvDim(left, right):
+    logger.debug("Conv dimension Test")
+    logger.debug("Result")
+    logger.debug(left.shape)
+    logger.debug("Reference")
+    logger.debug(right.shape)
+    assert (left.shape == right.shape)
+    #assert np.isclose(left, scaledRight).all()
+
+
 def assertManualWithOffset(left, right):
     logger.debug("Scaled with offset Test")
 
@@ -195,6 +205,29 @@ def runTest():
     result4 = session.run(scaledWithOffset)
     assertManualWithOffset(result4, manual)
     logger.info ('Scaling with offset Test Passed')
+
+
+    imageSize = 4
+    imageChannels = 3
+    batchSize = 2
+    
+    np.random.seed(1)
+    convImage = np.random.rand(batchSize, imageChannels, imageSize, imageSize)
+
+    convInputImage = tf.constant(convImage, dtype=tf.float32)
+    
+    
+    convLayer = SpatialTransformerLayer(imageSize, imageSize, imageChannels, imageSize, imageSize, imageChannels, "ConvLayer")
+    convLayer.initialize()
+
+    init_op = tf.initialize_all_variables()
+
+    session.run(init_op)
+
+    conv      = convLayer.forward(convInputImage)
+    result5   = session.run(conv)
+    assertConvDim(result5, convImage)
+    logger.info ('Conv dimension Test Passed')
 
 
 
