@@ -289,6 +289,7 @@ class SpatialTransformerLayer:
 
         result = []
 
+        #multi dim gather in tf doesnt implement backprop
         flatInputData = tf.reshape(inputData, [-1])
 
         inputShape    = tf.shape(inputData)

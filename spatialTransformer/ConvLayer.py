@@ -56,7 +56,7 @@ class ConvLayer:
         outputChannels = self.filterSize[2]
 
         return tf.Variable(tf.truncated_normal([filterH, filterW, inputChannels, outputChannels],
-            stddev=1.0 / math.sqrt(float(filterW*filterH*inputChannels)), seed=1), name='weights')
+            stddev=math.sqrt(6.0 / float(filterW*filterH*inputChannels)), seed=1), name='weights')
     
     def createBiasMatrix(self):
 
