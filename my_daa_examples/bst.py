@@ -1,3 +1,11 @@
+###############################################################################
+#
+# \file    bst.py
+# \author  Sudnya Padalikar <mailsudnya@gmail.com>
+# \date    Saturday Aug 27, 2016
+# \brief   binary search tree
+#
+###############################################################################
 
 
 def searchBst(inputA, query):
