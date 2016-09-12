@@ -20,6 +20,7 @@ def runDijkstra(graph, startingNode):
     frontier.put(startingNode, 0)
 
     parent = {}
+    parent[startingNode] = None
     cost = {}
 
     initializeCost(cost, startingNode, graph.keys())
