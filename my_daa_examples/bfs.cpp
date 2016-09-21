@@ -1,32 +1,55 @@
 #include <iostream>
 #include <vector>
 #include <set>
-#include <queue>
+#include <deque>
+
+void printSet(std::set<int> v)
+{
+    std::cout << "\nVisited: ";
+    for (auto i = v.begin(); i != v.end(); ++i)
+        std::cout << *i << " , ";
+    std::cout << "\n";
+}
+
+void printFrontier(std::deque<int>v)
+{
+    std::cout << "\nFrontier: ";
+    for (auto i = v.begin(); i != v.end(); ++i)
+        std::cout << *i << " , ";
+    std::cout << "\n";
+}
 
 void runBfs(std::vector<std::vector<int>>g)
 {
     std::set<int> visited;
-    std::queue<int> frontier;
+    std::deque<int> frontier;
     
-    frontier.push(g.size());
-    visited.insert(g.size());
+    frontier.push_back(0);
+    visited.insert(0);
 
-    while(!frontier.empty())
+    while(!frontier.empty() && visited.size() != g.size() )
     {
         //get adjacent
         auto current = frontier.front();
-        frontier.pop();
+        std::cout << "current: " << current << std::endl;
+        frontier.pop_front();
+        
         visited.insert(current);
+        printSet(visited);
+
         auto adjacent = g.at(current);
 
         for (auto i = adjacent.begin(); i != adjacent.end(); ++i)
         {
             bool isVisited = visited.find(*i) != visited.end();
+            std::cout << *i <<" is " << isVisited << " isVisited?! \n";
             if (!isVisited)
             {
-                frontier.push(*i);
+                //std::cout << "Not visited adjacent: " << *i << std::endl;
+                frontier.push_back(*i);
             }
         }
+        printFrontier(frontier);
 
     }
 }
@@ -66,14 +89,14 @@ int main()
     g.push_back(five);
 
     int counter = 0;
-    for (auto i = g.begin(); i != g.end(); ++i, ++counter)
+    /*for (auto i = g.begin(); i != g.end(); ++i, ++counter)
     {
         std::cout << "\nNode: " << counter << " : ";
         for (auto j = i->begin(); j != i->end(); ++j)
         {
             std::cout << *j << " \t ";
         }
-    }
+    }*/
 
     runBfs(g);
 }

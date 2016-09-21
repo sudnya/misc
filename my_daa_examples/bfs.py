@@ -23,7 +23,7 @@ def runBfs(graph, startingNode):
         logger.info("Frontier contains: " + str(frontier))
         logger.info("visited contains: " + str(visited))
         node = frontier.popleft()
-        logger.info ("Currently processing: " + str(node))
+        logger.info ("BFS traverse: " + str(node))
         
         visited.add(node)
         adjNodes = graph.get(node)
@@ -32,20 +32,20 @@ def runBfs(graph, startingNode):
 
         for entry in adjNodes:
             if entry not in visited:
-                logger.info("Adding new (unvisited) connected node: " + entry + " to frontier list")
+                logger.info("Adding new (unvisited) connected node: " + str(entry) + " to frontier list")
                 frontier.append(entry)
             else:
-                logger.info("Already saw: " + entry + " do nothing")
+                logger.info("Already saw: " + str(entry) + " do nothing")
 
 
 def createGraph():
     adjList = {}
-    adjList["A"] = set(["B", "C"])
-    adjList["B"] = set("C")
-    adjList["C"] = set("D")
-    adjList["D"] = set("E")
-    adjList["E"] = set(["B", "F"])
-    adjList["F"] = None
+    adjList[0] = set([1,2])
+    adjList[1] = set([2,3])
+    adjList[2] = set([5])
+    adjList[3] = set([4])
+    adjList[4] = set([1])
+    adjList[5] = None
 
     return adjList
 
@@ -63,7 +63,7 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
     graph = createGraph()
-    runBfs(graph, "F")
+    runBfs(graph, 0)
 
 if __name__ == '__main__':
     main()
