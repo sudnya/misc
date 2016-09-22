@@ -3,15 +3,15 @@
 #include <set>
 #include <deque>
 
-void printSet(std::set<int> v)
+void printSet(const std::set<int>& v)
 {
     std::cout << "\nVisited: ";
-    for (auto i = v.begin(); i != v.end(); ++i)
-        std::cout << *i << " , ";
+    for (auto& i : v)
+        std::cout << i << " , ";
     std::cout << "\n";
 }
 
-void printFrontier(std::deque<int>v)
+void printFrontier(const std::deque<int>& v)
 {
     std::cout << "\nFrontier: ";
     for (auto i = v.begin(); i != v.end(); ++i)
@@ -19,7 +19,7 @@ void printFrontier(std::deque<int>v)
     std::cout << "\n";
 }
 
-void runBfs(std::vector<std::vector<int>>g)
+void runBfs(const std::vector<std::vector<int>>& g)
 {
     std::set<int> visited;
     std::deque<int> frontier;
@@ -42,7 +42,7 @@ void runBfs(std::vector<std::vector<int>>g)
         for (auto i = adjacent.begin(); i != adjacent.end(); ++i)
         {
             bool isVisited = visited.find(*i) != visited.end();
-            std::cout << *i <<" is " << isVisited << " isVisited?! \n";
+            std::cout << *i << " is " << isVisited << " isVisited?! \n";
             if (!isVisited)
             {
                 //std::cout << "Not visited adjacent: " << *i << std::endl;
@@ -50,14 +50,13 @@ void runBfs(std::vector<std::vector<int>>g)
             }
         }
         printFrontier(frontier);
-
     }
 }
 int main()
 {
     std::cout << "BFS\n";
     //create a graph
-    std::vector<std::vector<int> > g;
+    std::vector<std::vector<int>> g;
     //0-> 1, 2
     //1-> 2, 3
     //2-> 5
