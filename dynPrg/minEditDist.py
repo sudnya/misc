@@ -63,7 +63,7 @@ def iterativeMinEditDistance(s1, s2, cache):
                     cache[(i, j)] = 0
                 # requires substitution/insert/delete
                 else:
-                    cache[(i, j)] = 1 + max(i, j) # one char in s1 - takes 
+                    cache[(i, j)] = 1 #+ max(i, j) # one char in s1 - takes 
                     logger.debug(str(i) + ", " + str(j) + " cache : " + str(cache))
             else:
                 # equal, so no need to add any edit cost

@@ -6,6 +6,7 @@
 # \brief   Given two strings S1 and S2, find out the longest common substring
 #
 ###############################################################################
+#TODO: redo this in a simple way
 
 import os
 import argparse
