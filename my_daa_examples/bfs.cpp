@@ -1,25 +1,27 @@
+/*
+ *
+ * \file    bfs.cpp
+ * \author  Sudnya Diamos <mailsudnya@gmail.com>
+ * \date    Friday Dec 9, 2016
+ * \brief   breadth first search
+ *
+**/
+
 #include <iostream>
 #include <vector>
 #include <set>
 #include <deque>
 
-void printSet(const std::set<int>& v)
+template <typename T>
+void printSet(const T v)
 {
-    std::cout << "\nVisited: ";
     for (auto& i : v)
         std::cout << i << " , ";
     std::cout << "\n";
 }
 
-void printFrontier(const std::deque<int>& v)
-{
-    std::cout << "\nFrontier: ";
-    for (auto i = v.begin(); i != v.end(); ++i)
-        std::cout << *i << " , ";
-    std::cout << "\n";
-}
-
-void runBfs(const std::vector<std::vector<int>>& g)
+template <typename T>
+void runBfs(T g) 
 {
     std::set<int> visited;
     std::deque<int> frontier;
@@ -31,71 +33,68 @@ void runBfs(const std::vector<std::vector<int>>& g)
     {
         //get adjacent
         auto current = frontier.front();
-        std::cout << "current: " << current << std::endl;
+        std::cout << "visiting current node: " << current << std::endl;
         frontier.pop_front();
         
         visited.insert(current);
-        printSet(visited);
 
         auto adjacent = g.at(current);
 
         for (auto i = adjacent.begin(); i != adjacent.end(); ++i)
         {
             bool isVisited = visited.find(*i) != visited.end();
-            std::cout << *i << " is " << isVisited << " isVisited?! \n";
             if (!isVisited)
             {
-                //std::cout << "Not visited adjacent: " << *i << std::endl;
+                std::cout << "adding " << *i << " to frontier\n";
                 frontier.push_back(*i);
             }
         }
-        printFrontier(frontier);
+        std::cout << "frontier: ";
+        printSet(frontier);
+        std::cout << "visited: ";
+        printSet(visited);
     }
 }
-int main()
+
+template <typename T>
+void printInput(T g)
 {
-    std::cout << "BFS\n";
-    //create a graph
-    std::vector<std::vector<int>> g;
-    //0-> 1, 2
-    //1-> 2, 3
-    //2-> 5
-    //3-> 4
-    //4-> 1
-    std::vector<int>zero;
-    zero.push_back(1);
-    zero.push_back(2);
-    g.push_back(zero);
-
-    std::vector<int>one;
-    one.push_back(2);
-    one.push_back(3);
-    g.push_back(one);
-
-    std::vector<int>two;
-    two.push_back(5);
-    g.push_back(two);
-
-    std::vector<int>three;
-    three.push_back(4);
-    g.push_back(three);
-
-    std::vector<int>four;
-    four.push_back(1);
-    g.push_back(four);
-
-    std::vector<int>five;
-    g.push_back(five);
-
     int counter = 0;
-    /*for (auto i = g.begin(); i != g.end(); ++i, ++counter)
+    for (auto i = g.begin(); i != g.end(); ++i, ++counter)
     {
         std::cout << "\nNode: " << counter << " : ";
         for (auto j = i->begin(); j != i->end(); ++j)
         {
             std::cout << *j << " \t ";
         }
-    }*/
+    }
+
+}
+/*
+ *      0 -> 1 ->   3
+ *     \|  .  /.\  \|/
+ * 5 <- 2 \./     .4
+ *
+ */
+int main()
+{
+    std::cout << "BFS\n";
+    //create a graph
+    //0-> 1, 2
+    //1-> 2, 3
+    //2-> 5
+    //3-> 4
+    //4-> 1
+    std::vector<int>zero  = {1,2};
+    std::vector<int>one   = {2,3};
+    std::vector<int>two   = {5};
+    std::vector<int>three = {4};
+    std::vector<int>four  = {1};
+    std::vector<int>five  = {};
+
+    std::vector<std::vector<int>> g = {zero, one, two, three, four, five};
+
+    //printInput(g);
 
     runBfs(g);
 }
