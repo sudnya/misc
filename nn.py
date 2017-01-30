@@ -36,10 +36,10 @@ class NeuralNetwork():
         self.p1 = self.p0 + self.B1
         yHat    = self.__applyNonLinearity__(self.p1)
         
-        logger.info("Input X: \n" + str(self.X.shape))
-        logger.info("Pre-activations: \n" + str(self.p0.shape))
-        logger.info("With Bias: \n" + str(self.p1.shape))
-        logger.info("Output: \n" + str(yHat.shape))
+        logger.debug("Input X: \n" + str(self.X.shape))
+        logger.debug("Pre-activations: \n" + str(self.p0.shape))
+        logger.debug("With Bias: \n" + str(self.p1.shape))
+        logger.debug("Output: \n" + str(yHat.shape))
         
         logger.debug("Input X: \n" + str(self.X))
         logger.debug("Pre-activations: \n" + str(self.p0))
@@ -64,11 +64,11 @@ class NeuralNetwork():
         # transpose to line up matrix dimensions for compatible dot product
         self.dLdW1 = dLdp0.dot(np.transpose(self.X))
         
-        logger.info("y: \n" + str(y.shape))
-        logger.info("y predicted: \n" + str(yPredicted.shape))
-        logger.info("dLdyPredicted : \n" + str(dLdyPredicted.shape))
-        logger.info("dLdp1: \n" + str(dLdp1.shape))
-        logger.info("dLdW1: \n" + str(self.dLdW1.shape))
+        logger.debug("y: \n" + str(y.shape))
+        logger.debug("y predicted: \n" + str(yPredicted.shape))
+        logger.debug("dLdyPredicted : \n" + str(dLdyPredicted.shape))
+        logger.debug("dLdp1: \n" + str(dLdp1.shape))
+        logger.debug("dLdW1: \n" + str(self.dLdW1.shape))
 
         logger.debug("y: \n" + str(y))
         logger.debug("y predicted: \n" + str(yPredicted))
@@ -180,11 +180,38 @@ class gradChecker():
         
         return retVal
 
+class Optimizer():
+    def __init__(self, name, networkRef, learningRate):
+        self.name         = name
+        self.nn           = networkRef
+        self.learningRate = learningRate
+
+    def run(self, X, y):
+        n = 20
+        for i in range(0, n):
+            predictions = self.nn.forward(X)
+            gradients   = self.nn.backProp(y, predictions)
+            weights     = self.nn.getWeights()
+            #TODO - something like this self.dLdB1 = np.reshape(np.add.reduce(dLdp1, 1), [dLdp1.shape[0],1])
+
+            logger.info("Gradient-Descent: Cost: " + str(self.nn.costFunction(y, predictions)))
+            for i in range(0, len(weights)):
+                #print "\nbefore \n", weights[i]
+                self.optimize(weights[i], gradients[i])
+                #weights[i] = np.add(weights[i], (gradients[i] * self.learningRate))
+                #print "\nafter \n", weights[i]
+
+    def optimize(self, weights, gradients):
+        shape = weights.shape
+        for i in range(0, shape[0]):
+            for j in range(0, shape[1]):
+                weights[i][j] += gradients[i] * self.learningRate
+        
 
 def main():
     # 1. support multiple mini batches in X - DONE
-    # TODO: 
     # 2. optimizer - gradient descent
+    # TODO: 
     # 3. more cost functions (softmax + cross entropy\negative log likelyhood)
     # 4. support ReLu
     #    more layers
@@ -206,13 +233,16 @@ def main():
     myNN       = NeuralNetwork("sigmoid", "simple", INPUTLAYERSIZE, OUTPUTLAYERSIZE)
     X          = np.random.rand(INPUTLAYERSIZE, SAMPLECOUNT)
     y          = np.random.rand(OUTPUTLAYERSIZE, SAMPLECOUNT)
-    prediction = myNN.forward(X)
-    gradients  = myNN.backProp(y, prediction)
-    
-    gradCheck  = gradChecker()
-    if (gradCheck.run(X, y, myNN, 1e-06)):
-        print "Grad check passed"
+    #prediction = myNN.forward(X)
+    #gradients  = myNN.backProp(y, prediction)
+    #
+    #gradCheck  = gradChecker()
+    #if (gradCheck.run(X, y, myNN, 1e-06)):
+    #    print "Grad check passed"
 
+    learningRate = 1e-01
+    gd = Optimizer("gradientDescent", myNN, learningRate)
+    gd.run(X, y)
 
 
     
