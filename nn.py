@@ -57,10 +57,11 @@ class NeuralNetwork():
         dLdp1 = self.__applyNonLinearityDelta__(yPredicted) * dLdyPredicted
 
         # gradients just propagate back on add operation
-        self.dLdB1 = np.reshape(np.add.reduce(dLdp1, 1), [dLdp1.shape[0],1])
         dLdp0 = dLdp1
+        # bias is always just a vector regardless of minibatch size
+        self.dLdB1 = np.reshape(np.add.reduce(dLdp1, 1), [dLdp1.shape[0],1])
 
-        # transpose to line up matrix dimensions
+        # transpose to line up matrix dimensions for compatible dot product
         self.dLdW1 = dLdp0.dot(np.transpose(self.X))
         
         logger.info("y: \n" + str(y.shape))
@@ -183,11 +184,11 @@ class gradChecker():
 def main():
     # 1. support multiple mini batches in X - DONE
     # TODO: 
-    # 4. optimizer - gradient descent
-    # 3. more cost functions (softmax + cross entropy\log likelyhood)
-    # 2. support ReLu
+    # 2. optimizer - gradient descent
+    # 3. more cost functions (softmax + cross entropy\negative log likelyhood)
+    # 4. support ReLu
     #    more layers
-    # 5. MNIST (marathi?) toy dataset
+    # 5. some toy dataset
     parser = argparse.ArgumentParser(description="My NN examples")
     parser.add_argument("-v", "--verbose", default = False, action = "store_true")
     
