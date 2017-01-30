@@ -18,7 +18,7 @@ import math
 logger = logging.getLogger('myNN')
 INPUTLAYERSIZE = 3
 OUTPUTLAYERSIZE = 3
-SAMPLECOUNT = 1
+SAMPLECOUNT = 2
 
 # X -> (*) -> p0 -> (+) -> p1 -> (~) -> yHat
 #       W1           B1        
@@ -36,6 +36,11 @@ class NeuralNetwork():
         self.p1 = self.p0 + self.B1
         yHat    = self.__applyNonLinearity__(self.p1)
         
+        logger.info("Input X: \n" + str(self.X.shape))
+        logger.info("Pre-activations: \n" + str(self.p0.shape))
+        logger.info("With Bias: \n" + str(self.p1.shape))
+        logger.info("Output: \n" + str(yHat.shape))
+        
         logger.debug("Input X: \n" + str(self.X))
         logger.debug("Pre-activations: \n" + str(self.p0))
         logger.debug("With Bias: \n" + str(self.p1))
@@ -52,12 +57,18 @@ class NeuralNetwork():
         dLdp1 = self.__applyNonLinearityDelta__(yPredicted) * dLdyPredicted
 
         # gradients just propagate back on add operation
-        self.dLdB1 = dLdp1
+        self.dLdB1 = np.reshape(np.add.reduce(dLdp1, 1), [dLdp1.shape[0],1])
         dLdp0 = dLdp1
 
         # transpose to line up matrix dimensions
         self.dLdW1 = dLdp0.dot(np.transpose(self.X))
         
+        logger.info("y: \n" + str(y.shape))
+        logger.info("y predicted: \n" + str(yPredicted.shape))
+        logger.info("dLdyPredicted : \n" + str(dLdyPredicted.shape))
+        logger.info("dLdp1: \n" + str(dLdp1.shape))
+        logger.info("dLdW1: \n" + str(self.dLdW1.shape))
+
         logger.debug("y: \n" + str(y))
         logger.debug("y predicted: \n" + str(yPredicted))
         logger.debug("dLdyPredicted : \n" + str(dLdyPredicted))
@@ -114,12 +125,10 @@ class NeuralNetwork():
 
 
     def __simpleLoss__(self, y, yHat):
-        J = 0.5*sum((y-yHat)**2)
-        return J
-
+        return (0.5*np.sum((y-yHat)**2))/y.shape[1]
 
     def __simpleLossDelta__(self, y, yHat):
-        return yHat - y
+        return (yHat - y)/(y.shape[1])
 
 class gradChecker():
     def __init__(self):
@@ -129,9 +138,8 @@ class gradChecker():
         pass
 
     def run(self, X, y, nn, epsilon):
+        retVal = True
         gradients = nn.getGradients()
-        #logger.info("Gradients: \n" + str(gradients))
-        #TODO: more than 2D --> dim   = len(shape)
 
         weights = nn.getWeights()  
         for w in range(len(weights)):
@@ -156,8 +164,11 @@ class gradChecker():
 
                     computedGradient = (plusCost - minusCost) / (2*epsilon)
 
-                    difference = math.pow(computedGradient - gradients[w][i][j], 2) / math.pow(gradients[w][i][j], 2)
+                    print "grad ", str(gradients[0].shape)
+                    difference = np.power(computedGradient - gradients[w][i][j], 2) / np.power(gradients[w][i][j], 2)
+                    
                     if difference > epsilon:
+                        retVal = False
                         logger.info("Difference " + str(difference) + " between computed gradient " +
                                     str(computedGradient) + " and back prop gradient " + str(gradients[w][i][j]) +
                                     " not in acceptable range")
@@ -166,10 +177,17 @@ class gradChecker():
                                     str(computedGradient) + " and back prop gradient " + str(gradients[w][i][j]) +
                                     " is in acceptable range")
         
-
+        return retVal
 
 
 def main():
+    # 1. support multiple mini batches in X - DONE
+    # TODO: 
+    # 4. optimizer - gradient descent
+    # 3. more cost functions (softmax + cross entropy\log likelyhood)
+    # 2. support ReLu
+    #    more layers
+    # 5. MNIST (marathi?) toy dataset
     parser = argparse.ArgumentParser(description="My NN examples")
     parser.add_argument("-v", "--verbose", default = False, action = "store_true")
     
@@ -186,12 +204,13 @@ def main():
     np.random.seed(23)
     myNN       = NeuralNetwork("sigmoid", "simple", INPUTLAYERSIZE, OUTPUTLAYERSIZE)
     X          = np.random.rand(INPUTLAYERSIZE, SAMPLECOUNT)
-    y          = np.random.rand(OUTPUTLAYERSIZE, 1)
+    y          = np.random.rand(OUTPUTLAYERSIZE, SAMPLECOUNT)
     prediction = myNN.forward(X)
     gradients  = myNN.backProp(y, prediction)
     
     gradCheck  = gradChecker()
-    gradCheck.run(X, y, myNN, 1e-06)
+    if (gradCheck.run(X, y, myNN, 1e-06)):
+        print "Grad check passed"
 
 
 
