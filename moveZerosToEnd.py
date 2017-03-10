@@ -46,6 +46,7 @@ def moveZerosToEnd(inputs):
 
 def compareRef(ref, o):
     #ensure len is same
+    logger.debug("ref " + str(len(ref)) + " while output is of len " + str(len(o)))
     assert len(ref) == len(o)
 
     #ensure contents are the same
@@ -88,11 +89,23 @@ def runTest():
     logger.info ("Test with input " + str(t5) + " passed reference check. Output " + str(o5))
 
     # already has zeros at the end
-    t6 =  [1,4,9,1,2,0,0,0,0,0]
+    t6 = [1,4,9,1,2,0,0,0,0,0]
     r6 = [1,4,9,1,2,0,0,0,0,0]
     o6 = moveZerosToEnd(t6)
     compareRef(r6, o6)
     logger.info ("Test with input " + str(t6) + " passed reference check. Output " + str(o6))
+    
+    t7 = []
+    r7 = []
+    o7 = moveZerosToEnd(t7)
+    compareRef(r7, o7)
+    logger.info ("Test with input " + str(t7) + " passed reference check. Output " + str(o7))
+    
+    t8 =  [0,0,0,1,1,1]
+    r8 = [1,1,1,0,0,0]
+    o8 = moveZerosToEnd(t8)
+    compareRef(r8, o8)
+    logger.info ("Test with input " + str(t8) + " passed reference check. Output " + str(o8))
    
     logger.info("Passed all reference checks")
 
