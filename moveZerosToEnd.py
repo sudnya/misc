@@ -35,7 +35,7 @@ def moveZerosToEnd(inputs):
             shiftLeft(inputs, i)
             ctr += 1
             logger.debug(inputs)
-            if ctr > len(inputs):
+            if ctr >= len(inputs)-i:
                 break
 
     #put zeros at last numZeros location
